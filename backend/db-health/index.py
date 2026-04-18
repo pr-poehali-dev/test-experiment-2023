@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import psycopg2
 
 
@@ -17,15 +18,17 @@ def handler(event: dict, context) -> dict:
             'body': ''
         }
 
+    t0 = time.monotonic()
     conn = psycopg2.connect(os.environ['DATABASE_URL'])
     cur = conn.cursor()
     cur.execute('SELECT version()')
     version = cur.fetchone()[0]
+    latency_ms = round((time.monotonic() - t0) * 1000, 1)
     cur.close()
     conn.close()
 
     return {
         'statusCode': 200,
         'headers': {'Access-Control-Allow-Origin': '*'},
-        'body': {'status': 'ok', 'version': version},
+        'body': {'status': 'ok', 'version': version, 'latency_ms': latency_ms},
     }
