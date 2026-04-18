@@ -62,7 +62,10 @@ def handler(event: dict, context) -> dict:
             'last_autoanalyze': stat[6].isoformat() if stat and stat[6] else None,
         }
 
-    cur.execute('SELECT pg_database_size(current_database())')
+    cur.execute('SELECT current_database()')
+    db_name = cur.fetchone()[0]
+
+    cur.execute('SELECT pg_database_size(%s)', (db_name,))
     db_size = cur.fetchone()[0]
 
     cur.close()
@@ -71,5 +74,5 @@ def handler(event: dict, context) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'tables': tables, 'db_size_bytes': db_size}),
+        'body': json.dumps({'db_name': db_name, 'tables': tables, 'db_size_bytes': db_size}),
     }
