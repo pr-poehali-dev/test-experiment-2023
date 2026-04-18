@@ -65,6 +65,9 @@ def handler(event: dict, context) -> dict:
     cur.execute('SELECT current_database()')
     db_name = cur.fetchone()[0]
 
+    cur.execute('SELECT current_user')
+    db_user = cur.fetchone()[0]
+
     cur.execute('SELECT pg_database_size(%s)', (db_name,))
     db_size = cur.fetchone()[0]
 
@@ -74,5 +77,5 @@ def handler(event: dict, context) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'db_name': db_name, 'tables': tables, 'db_size_bytes': db_size}),
+        'body': json.dumps({'db_name': db_name, 'db_user': db_user, 'tables': tables, 'db_size_bytes': db_size}),
     }
