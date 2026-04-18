@@ -92,19 +92,17 @@ def handler(event: dict, context) -> dict:
     } if row else {}
 
     cur.execute("""
-        SELECT
-            rolpassword IS NOT NULL AS has_password,
-            CASE
-                WHEN rolpassword LIKE 'SCRAM%' THEN 'scram-sha-256'
-                WHEN rolpassword LIKE 'md5%' THEN 'md5'
-                ELSE 'unknown'
-            END AS password_type
-        FROM pg_catalog.pg_authid WHERE rolname = current_user
+        SELECT schemaname, count(*) AS table_count,
+               sum(pg_total_relation_size(schemaname || chr(46) || relname)) AS total_size
+        FROM pg_stat_user_tables
+        GROUP BY schemaname
+        ORDER BY total_size DESC
+        LIMIT 10
     """)
-    auth_row = cur.fetchone()
-    if auth_row:
-        user_privileges['has_password'] = auth_row[0]
-        user_privileges['password_type'] = auth_row[1]
+    schema_stats = [
+        {'schemaname': r[0], 'table_count': r[1], 'total_size': r[2]}
+        for r in cur.fetchall()
+    ]
 
     cur.close()
     conn.close()
@@ -112,5 +110,5 @@ def handler(event: dict, context) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'db_name': db_name, 'db_user': db_user, 'connection_info': connection_info, 'user_privileges': user_privileges, 'tables': tables, 'db_size_bytes': db_size}),
+        'body': json.dumps({'db_name': db_name, 'db_user': db_user, 'connection_info': connection_info, 'user_privileges': user_privileges, 'schema_stats': schema_stats, 'tables': tables, 'db_size_bytes': db_size}),
     }
