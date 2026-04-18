@@ -24,6 +24,9 @@ export default {
 		},
 		extend: {
 			colors: {
+				'fishing-blue': '#1a5276',
+				'fishing-green': '#1e8449',
+				'fishing-sand': '#f0e68c',
 				water: {
 					50: 'hsl(var(--water-50))',
 					100: 'hsl(var(--water-100))',
