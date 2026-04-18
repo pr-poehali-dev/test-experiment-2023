@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
+import siteConfig from '@/data/site-config.json';
 
 const TRIPS_URL = 'https://functions.poehali.dev/edae194a-306d-463f-aebc-aa3f31fcc94d';
 
@@ -77,7 +78,7 @@ export default function Index() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[hsl(var(--water-50))]/90 backdrop-blur-md border-b border-[hsl(var(--water-100))]">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <span className="font-cormorant text-xl font-semibold tracking-wide text-[hsl(var(--water-900))]">
-            Рыбацкий Круг
+            {siteConfig.title}
           </span>
           <div className="hidden md:flex gap-8">
             {NAV_LINKS.map((link) => (
