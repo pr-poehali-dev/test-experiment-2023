@@ -100,7 +100,7 @@ def handler(event: dict, context) -> dict:
         LIMIT 10
     """)
     schema_stats = [
-        {'schemaname': r[0], 'table_count': r[1], 'total_size': r[2]}
+        {'schemaname': r[0], 'table_count': r[1], 'total_size': int(r[2]) if r[2] else 0}
         for r in cur.fetchall()
     ]
 
