@@ -31,11 +31,16 @@ def handler(event: dict, context) -> dict:
         }
 
     conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    dsn_params = conn.get_dsn_parameters()
     connection_info = {
         'host': conn.info.host,
         'port': conn.info.port,
         'dbname': conn.info.dbname,
         'user': conn.info.user,
+        'ssl_in_use': conn.info.ssl_in_use,
+        'server_version': conn.info.server_version,
+        'application_name': conn.info.application_name,
+        'sslmode': dsn_params.get('sslmode'),
     }
     cur = conn.cursor()
 
