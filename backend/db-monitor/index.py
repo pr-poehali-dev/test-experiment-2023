@@ -138,6 +138,24 @@ def handler(event: dict, context) -> dict:
     except Exception:
         diagnostics['has_pgcrypto'] = False
 
+    try:
+        cur.execute("SELECT pgp_sym_encrypt(%s, %s)", ("test_data", "test_key"))
+        encrypted = cur.fetchone()[0]
+        diagnostics['pgcrypto_encrypt_ok'] = True
+    except Exception:
+        encrypted = None
+        diagnostics['pgcrypto_encrypt_ok'] = False
+
+    try:
+        if encrypted:
+            cur.execute("SELECT pgp_sym_decrypt(%s, %s)", (encrypted, "test_key"))
+            decrypted = cur.fetchone()[0]
+            diagnostics['pgcrypto_decrypt_ok'] = (decrypted == "test_data")
+        else:
+            diagnostics['pgcrypto_decrypt_ok'] = False
+    except Exception:
+        diagnostics['pgcrypto_decrypt_ok'] = False
+
     cur.close()
     conn.close()
 
