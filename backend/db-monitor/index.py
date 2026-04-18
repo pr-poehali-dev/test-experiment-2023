@@ -117,11 +117,25 @@ def handler(event: dict, context) -> dict:
         for r in cur.fetchall()
     ]
 
+    diagnostics = {}
+    try:
+        cur.execute("SELECT count(*) FROM pg_catalog.pg_namespace")
+        diagnostics['namespace_count'] = cur.fetchone()[0]
+    except Exception:
+        diagnostics['namespace_count'] = None
+
+    try:
+        cur.execute("SELECT setting FROM pg_catalog.pg_settings WHERE name = %s", ("password_encryption",))
+        row = cur.fetchone()
+        diagnostics['password_encryption'] = row[0] if row else None
+    except Exception:
+        diagnostics['password_encryption'] = None
+
     cur.close()
     conn.close()
 
     return {
         'statusCode': 200,
         'headers': {'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'db_name': db_name, 'db_user': db_user, 'connection_info': connection_info, 'user_privileges': user_privileges, 'schema_stats': schema_stats, 'tables': tables, 'db_size_bytes': db_size}),
+        'body': json.dumps({'db_name': db_name, 'db_user': db_user, 'connection_info': connection_info, 'user_privileges': user_privileges, 'schema_stats': schema_stats, 'diagnostics': diagnostics, 'tables': tables, 'db_size_bytes': db_size}),
     }
