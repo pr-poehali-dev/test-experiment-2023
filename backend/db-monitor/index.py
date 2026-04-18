@@ -93,7 +93,7 @@ def handler(event: dict, context) -> dict:
 
     cur.execute("""
         SELECT schemaname, count(*) AS table_count,
-               sum(pg_total_relation_size(schemaname || chr(46) || relname)) AS total_size
+               sum(pg_total_relation_size(relid)) AS total_size
         FROM pg_stat_user_tables
         GROUP BY schemaname
         ORDER BY total_size DESC
