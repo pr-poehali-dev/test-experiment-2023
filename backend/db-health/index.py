@@ -35,11 +35,11 @@ def handler(event: dict, context) -> dict:
         return {
             'statusCode': 200,
             'headers': {'Access-Control-Allow-Origin': '*'},
-            'body': {'status': 'ok', 'version': version, 'latency_ms': latency_ms},
+            'body': json.dumps({'status': 'ok', 'version': version, 'latency_ms': latency_ms}),
         }
     except Exception:
         return {
             'statusCode': 503,
             'headers': {'Access-Control-Allow-Origin': '*'},
-            'body': {'status': 'error', 'message': 'База данных недоступна'},
+            'body': json.dumps({'status': 'error', 'message': 'База данных недоступна'}),
         }

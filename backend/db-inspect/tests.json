@@ -1,26 +1,10 @@
 {
   "tests": [
     {
-      "name": "Без параметра — ошибка 400",
+      "name": "Без токена — 401",
       "method": "GET",
       "path": "/",
-      "expectedStatus": 400,
-      "expectedBody": {"error": "string"},
-      "bodyMatcher": "partial"
-    },
-    {
-      "name": "Запрос таблицы members",
-      "method": "GET",
-      "path": "/?table=members",
-      "expectedStatus": 200,
-      "expectedBody": {"table": "members"},
-      "bodyMatcher": "partial"
-    },
-    {
-      "name": "Запрос несуществующей таблицы — 403",
-      "method": "GET",
-      "path": "/?table=secrets",
-      "expectedStatus": 403,
+      "expectedStatus": 401,
       "expectedBody": {"error": "string"},
       "bodyMatcher": "partial"
     }

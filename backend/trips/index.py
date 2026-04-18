@@ -3,6 +3,8 @@ import os
 import psycopg2
 from datetime import date
 
+SCHEMA = 't_p53092451_test_experiment_2023'
+
 
 def handler(event: dict, context) -> dict:
     """Возвращает список предстоящих выездов с информацией о водоёме."""
@@ -21,52 +23,51 @@ def handler(event: dict, context) -> dict:
 
     region = (event.get('queryStringParameters') or {}).get('region', '').strip()
 
-    conn = psycopg2.connect(os.environ['DATABASE_URL'])
-    cur = conn.cursor()
+    try:
+        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    except Exception:
+        return {
+            'statusCode': 503,
+            'headers': {'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'База данных недоступна', 'stage': 'connection'}),
+        }
 
-    if region:
-        cur.execute("""
-            SELECT
-                t.id,
-                t.title,
-                t.date,
-                t.participants_count,
-                t.organizer,
-                t.status,
-                s.name  AS spot_name,
-                s.region,
-                s.fish_types,
-                s.difficulty
-            FROM t_p53092451_test_experiment_2023.trips t
-            LEFT JOIN t_p53092451_test_experiment_2023.spots s ON t.spot_id = s.id
-            WHERE t.status = 'planned'
-              AND s.region ILIKE '%%' || %s || '%%'
-            ORDER BY t.date ASC
-            LIMIT 10
-        """, (region,))
-    else:
-        cur.execute("""
-            SELECT
-                t.id,
-                t.title,
-                t.date,
-                t.participants_count,
-                t.organizer,
-                t.status,
-                s.name  AS spot_name,
-                s.region,
-                s.fish_types,
-                s.difficulty
-            FROM t_p53092451_test_experiment_2023.trips t
-            LEFT JOIN t_p53092451_test_experiment_2023.spots s ON t.spot_id = s.id
-            WHERE t.status = 'planned'
-            ORDER BY t.date ASC
-            LIMIT 10
-        """)
+    try:
+        cur = conn.cursor()
+        if region:
+            cur.execute("""
+                SELECT
+                    t.id, t.title, t.date, t.participants_count, t.organizer, t.status,
+                    s.name AS spot_name, s.region, s.fish_types, s.difficulty
+                FROM {schema}.trips t
+                LEFT JOIN {schema}.spots s ON t.spot_id = s.id
+                WHERE t.status = 'planned'
+                  AND s.region ILIKE '%%' || %s || '%%'
+                ORDER BY t.date ASC
+                LIMIT 10
+            """.format(schema=SCHEMA), (region,))
+        else:
+            cur.execute("""
+                SELECT
+                    t.id, t.title, t.date, t.participants_count, t.organizer, t.status,
+                    s.name AS spot_name, s.region, s.fish_types, s.difficulty
+                FROM {schema}.trips t
+                LEFT JOIN {schema}.spots s ON t.spot_id = s.id
+                WHERE t.status = 'planned'
+                ORDER BY t.date ASC
+                LIMIT 10
+            """.format(schema=SCHEMA))
 
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception:
+        conn.close()
+        return {
+            'statusCode': 500,
+            'headers': {'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Ошибка выполнения запроса', 'stage': 'query'}),
+        }
 
     trips = []
     for row in rows:

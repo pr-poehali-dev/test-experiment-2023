@@ -2,7 +2,6 @@ import json
 import os
 import psycopg2
 
-
 SCHEMA = 't_p53092451_test_experiment_2023'
 ALLOWED_TABLES = {'members', 'spots', 'trips'}
 ALLOWED_COLUMNS = {
@@ -13,7 +12,7 @@ ALLOWED_COLUMNS = {
 
 
 def handler(event: dict, context) -> dict:
-    """Отладочный эндпоинт: принимает имя таблицы, возвращает её содержимое."""
+    """Отладочный эндпоинт: принимает имя таблицы, возвращает её содержимое. Требует ADMIN_TOKEN."""
 
     if event.get('httpMethod') == 'OPTIONS':
         return {
@@ -21,10 +20,19 @@ def handler(event: dict, context) -> dict:
             'headers': {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
                 'Access-Control-Max-Age': '86400',
             },
             'body': '',
+        }
+
+    auth = (event.get('headers') or {}).get('X-Authorization', '')
+    token = os.environ.get('ADMIN_TOKEN', '')
+    if not token or auth != f'Bearer {token}':
+        return {
+            'statusCode': 401,
+            'headers': {'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Unauthorized'}),
         }
 
     params = event.get('queryStringParameters') or {}
@@ -68,16 +76,30 @@ def handler(event: dict, context) -> dict:
             where_clause = f'WHERE {col} = %s'
             where_values = [val.strip()]
 
-    conn = psycopg2.connect(os.environ['DATABASE_URL'])
-    cur = conn.cursor()
+    try:
+        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    except Exception:
+        return {
+            'statusCode': 503,
+            'headers': {'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'База данных недоступна', 'stage': 'connection'}),
+        }
 
-    query = f'SELECT * FROM {SCHEMA}.{table} {where_clause} ORDER BY {order_by} LIMIT %s OFFSET %s'
-    cur.execute(query, where_values + [limit, offset])
-    columns = [desc[0] for desc in cur.description]
-    rows = cur.fetchall()
-
-    cur.close()
-    conn.close()
+    try:
+        cur = conn.cursor()
+        query = f'SELECT * FROM {SCHEMA}.{table} {where_clause} ORDER BY {order_by} LIMIT %s OFFSET %s'
+        cur.execute(query, where_values + [limit, offset])
+        columns = [desc[0] for desc in cur.description]
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception:
+        conn.close()
+        return {
+            'statusCode': 500,
+            'headers': {'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'error': 'Ошибка выполнения запроса', 'stage': 'query'}),
+        }
 
     data = []
     for row in rows:
