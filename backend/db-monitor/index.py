@@ -3,10 +3,11 @@ import os
 import psycopg2
 
 SCHEMA = 't_p53092451_test_experiment_2023'
+TABLES = ('members', 'spots', 'trips')
 
 
 def handler(event: dict, context) -> dict:
-    """Мониторинг: возвращает количество строк в таблицах members, spots, trips. Требует ADMIN_TOKEN."""
+    """Мониторинг: счётчики строк, last_updated и размер БД. Требует ADMIN_TOKEN."""
 
     if event.get('httpMethod') == 'OPTIONS':
         return {
@@ -32,10 +33,17 @@ def handler(event: dict, context) -> dict:
     conn = psycopg2.connect(os.environ['DATABASE_URL'])
     cur = conn.cursor()
 
-    counts = {}
-    for table in ('members', 'spots', 'trips'):
-        cur.execute(f'SELECT count(*) FROM {SCHEMA}.{table}')
-        counts[table] = cur.fetchone()[0]
+    tables = {}
+    for table in TABLES:
+        cur.execute(f'SELECT count(*), max(created_at) FROM {SCHEMA}.{table}')
+        count, last_updated = cur.fetchone()
+        tables[table] = {
+            'count': count,
+            'last_updated': last_updated.isoformat() if last_updated else None,
+        }
+
+    cur.execute('SELECT pg_database_size(current_database())')
+    db_size = cur.fetchone()[0]
 
     cur.close()
     conn.close()
@@ -43,5 +51,5 @@ def handler(event: dict, context) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'counts': counts}),
+        'body': json.dumps({'tables': tables, 'db_size_bytes': db_size}),
     }
