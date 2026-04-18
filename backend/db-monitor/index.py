@@ -81,11 +81,21 @@ def handler(event: dict, context) -> dict:
     cur.execute('SELECT pg_database_size(%s)', (db_name,))
     db_size = cur.fetchone()[0]
 
+    cur.execute("""
+        SELECT rolname, rolsuper, rolcreaterole, rolcreatedb, rolcanlogin
+        FROM pg_catalog.pg_roles WHERE rolname = current_user
+    """)
+    row = cur.fetchone()
+    user_privileges = {
+        'rolname': row[0], 'rolsuper': row[1],
+        'rolcreaterole': row[2], 'rolcreatedb': row[3], 'rolcanlogin': row[4],
+    } if row else {}
+
     cur.close()
     conn.close()
 
     return {
         'statusCode': 200,
         'headers': {'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'db_name': db_name, 'db_user': db_user, 'connection_info': connection_info, 'tables': tables, 'db_size_bytes': db_size}),
+        'body': json.dumps({'db_name': db_name, 'db_user': db_user, 'connection_info': connection_info, 'user_privileges': user_privileges, 'tables': tables, 'db_size_bytes': db_size}),
     }
