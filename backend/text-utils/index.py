@@ -47,18 +47,18 @@ def handler(event: dict, context) -> dict:
     try:
         cur = conn.cursor()
         cur.execute(
-            "SELECT length(%s), octet_length(%s), pg_client_encoding()",
+            "SELECT length(%s::text), octet_length(%s::text)",
             (text, text)
         )
         row = cur.fetchone()
         cur.close()
         conn.close()
-    except Exception:
+    except Exception as e:
         conn.close()
         return {
             'statusCode': 500,
             'headers': {'Access-Control-Allow-Origin': '*'},
-            'body': json.dumps({'error': 'Ошибка выполнения запроса', 'stage': 'query'}),
+            'body': json.dumps({'error': 'Ошибка выполнения запроса', 'stage': 'query', 'exception': type(e).__name__}),
         }
 
     return {
@@ -68,6 +68,5 @@ def handler(event: dict, context) -> dict:
             'text': text,
             'length': row[0],
             'octet_length': row[1],
-            'encoding': row[2],
         }, ensure_ascii=False),
     }
