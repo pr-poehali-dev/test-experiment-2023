@@ -19,27 +19,50 @@ def handler(event: dict, context) -> dict:
             'body': '',
         }
 
+    region = (event.get('queryStringParameters') or {}).get('region', '').strip()
+
     conn = psycopg2.connect(os.environ['DATABASE_URL'])
     cur = conn.cursor()
 
-    cur.execute("""
-        SELECT
-            t.id,
-            t.title,
-            t.date,
-            t.participants_count,
-            t.organizer,
-            t.status,
-            s.name  AS spot_name,
-            s.region,
-            s.fish_types,
-            s.difficulty
-        FROM t_p53092451_test_experiment_2023.trips t
-        LEFT JOIN t_p53092451_test_experiment_2023.spots s ON t.spot_id = s.id
-        WHERE t.status = 'planned'
-        ORDER BY t.date ASC
-        LIMIT 10
-    """)
+    if region:
+        cur.execute("""
+            SELECT
+                t.id,
+                t.title,
+                t.date,
+                t.participants_count,
+                t.organizer,
+                t.status,
+                s.name  AS spot_name,
+                s.region,
+                s.fish_types,
+                s.difficulty
+            FROM t_p53092451_test_experiment_2023.trips t
+            LEFT JOIN t_p53092451_test_experiment_2023.spots s ON t.spot_id = s.id
+            WHERE t.status = 'planned'
+              AND s.region ILIKE '%%' || %s || '%%'
+            ORDER BY t.date ASC
+            LIMIT 10
+        """, (region,))
+    else:
+        cur.execute("""
+            SELECT
+                t.id,
+                t.title,
+                t.date,
+                t.participants_count,
+                t.organizer,
+                t.status,
+                s.name  AS spot_name,
+                s.region,
+                s.fish_types,
+                s.difficulty
+            FROM t_p53092451_test_experiment_2023.trips t
+            LEFT JOIN t_p53092451_test_experiment_2023.spots s ON t.spot_id = s.id
+            WHERE t.status = 'planned'
+            ORDER BY t.date ASC
+            LIMIT 10
+        """)
 
     rows = cur.fetchall()
     cur.close()
