@@ -31,6 +31,12 @@ def handler(event: dict, context) -> dict:
         }
 
     conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    connection_info = {
+        'host': conn.info.host,
+        'port': conn.info.port,
+        'dbname': conn.info.dbname,
+        'user': conn.info.user,
+    }
     cur = conn.cursor()
 
     cur.execute("""
@@ -77,5 +83,5 @@ def handler(event: dict, context) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'db_name': db_name, 'db_user': db_user, 'tables': tables, 'db_size_bytes': db_size}),
+        'body': json.dumps({'db_name': db_name, 'db_user': db_user, 'connection_info': connection_info, 'tables': tables, 'db_size_bytes': db_size}),
     }
