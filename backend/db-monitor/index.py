@@ -91,12 +91,12 @@ def handler(event: dict, context) -> dict:
         'rolcreaterole': row[2], 'rolcreatedb': row[3], 'rolcanlogin': row[4],
     } if row else {}
 
-    cur.execute("SELECT extname FROM pg_extension ORDER BY extname")
-    extensions = [r[0] for r in cur.fetchall()]
+    cur.execute("SELECT extname, extversion FROM pg_extension ORDER BY extname")
+    extensions = [{'name': r[0], 'version': r[1]} for r in cur.fetchall()]
 
     cur.execute("""
         SELECT nspname FROM pg_catalog.pg_namespace
-        WHERE has_schema_privilege(nspname, 'USAGE')
+        WHERE nspname NOT LIKE 'pg_%' AND nspname != 'information_schema'
         ORDER BY nspname LIMIT 20
     """)
     accessible_schemas = [r[0] for r in cur.fetchall()]
