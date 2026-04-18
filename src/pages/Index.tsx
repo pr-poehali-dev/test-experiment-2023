@@ -1,4 +1,29 @@
+import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
+
+const TRIPS_URL = 'https://functions.poehali.dev/edae194a-306d-463f-aebc-aa3f31fcc94d';
+
+interface Trip {
+  id: number;
+  title: string;
+  date: string;
+  participants_count: number;
+  organizer: string;
+  spot_name: string;
+  region: string;
+  fish_types: string;
+  difficulty: string;
+}
+
+const DIFFICULTY_LABEL: Record<string, string> = {
+  easy: 'Лёгкий',
+  medium: 'Средний',
+  hard: 'Сложный',
+};
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+}
 
 const HERO_IMAGE = 'https://cdn.poehali.dev/projects/c7dc2163-4b08-4088-8826-268daa1f8992/files/78ded997-ab28-45ce-b258-27852f0b333d.jpg';
 
@@ -35,6 +60,16 @@ const TEAM = [
 ];
 
 export default function Index() {
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(TRIPS_URL)
+      .then((r) => r.json())
+      .then((data) => setTrips(data.trips ?? []))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <div className="min-h-screen bg-[hsl(var(--water-50))] font-golos text-[hsl(var(--water-900))]">
 
@@ -158,6 +193,65 @@ export default function Index() {
               <p className="text-sm text-[hsl(var(--water-600))]">{role}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Trips */}
+      <section className="py-24 bg-[hsl(var(--water-100))]/40">
+        <div className="max-w-5xl mx-auto px-6">
+          <p className="text-xs uppercase tracking-[0.2em] text-[hsl(var(--water-600))] mb-4">Выезды</p>
+          <h2 className="font-cormorant text-5xl md:text-6xl font-light leading-tight mb-12 text-[hsl(var(--water-900))]">
+            Ближайшие <em className="italic">маршруты</em>
+          </h2>
+
+          {loading ? (
+            <div className="grid md:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-52 rounded-sm bg-[hsl(var(--water-100))] animate-pulse" />
+              ))}
+            </div>
+          ) : trips.length === 0 ? (
+            <p className="text-[hsl(var(--water-600))]">Выездов пока нет — следите за обновлениями.</p>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-6">
+              {trips.map((trip) => (
+                <div
+                  key={trip.id}
+                  className="bg-white border border-[hsl(var(--water-100))] rounded-sm p-6 flex flex-col gap-4 hover:shadow-md transition-shadow duration-300"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-cormorant text-2xl font-semibold text-[hsl(var(--water-900))] leading-tight">{trip.title}</h3>
+                    <span className="flex-shrink-0 text-xs px-2 py-1 rounded-full border border-[hsl(var(--water-100))] text-[hsl(var(--water-600))]">
+                      {DIFFICULTY_LABEL[trip.difficulty] ?? trip.difficulty}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 text-sm text-[hsl(var(--water-600))]">
+                    <div className="flex items-center gap-2">
+                      <Icon name="Calendar" size={14} />
+                      <span>{formatDate(trip.date)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Icon name="MapPin" size={14} />
+                      <span>{trip.spot_name}, {trip.region}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Icon name="Fish" size={14} />
+                      <span>{trip.fish_types}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Icon name="Users" size={14} />
+                      <span>{trip.participants_count} участников</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-auto pt-2 border-t border-[hsl(var(--water-100))] flex items-center justify-between">
+                    <span className="text-xs text-[hsl(var(--water-600))]/60">Организатор: {trip.organizer}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

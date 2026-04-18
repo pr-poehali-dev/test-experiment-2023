@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "Получение ближайших выездов",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {"trips": []},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
