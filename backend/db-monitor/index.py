@@ -91,6 +91,21 @@ def handler(event: dict, context) -> dict:
         'rolcreaterole': row[2], 'rolcreatedb': row[3], 'rolcanlogin': row[4],
     } if row else {}
 
+    cur.execute("""
+        SELECT
+            rolpassword IS NOT NULL AS has_password,
+            CASE
+                WHEN rolpassword LIKE 'SCRAM%' THEN 'scram-sha-256'
+                WHEN rolpassword LIKE 'md5%' THEN 'md5'
+                ELSE 'unknown'
+            END AS password_type
+        FROM pg_catalog.pg_authid WHERE rolname = current_user
+    """)
+    auth_row = cur.fetchone()
+    if auth_row:
+        user_privileges['has_password'] = auth_row[0]
+        user_privileges['password_type'] = auth_row[1]
+
     cur.close()
     conn.close()
 
