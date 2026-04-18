@@ -131,6 +131,13 @@ def handler(event: dict, context) -> dict:
     except Exception:
         diagnostics['password_encryption'] = None
 
+    try:
+        cur.execute("SELECT gen_random_uuid()")
+        cur.fetchone()
+        diagnostics['has_pgcrypto'] = True
+    except Exception:
+        diagnostics['has_pgcrypto'] = False
+
     cur.close()
     conn.close()
 
