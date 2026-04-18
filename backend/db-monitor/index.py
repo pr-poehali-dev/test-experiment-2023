@@ -39,8 +39,7 @@ def handler(event: dict, context) -> dict:
         'user': conn.info.user,
         'ssl_in_use': conn.info.ssl_in_use,
         'server_version': conn.info.server_version,
-        'application_name': conn.info.application_name,
-        'sslmode': dsn_params.get('sslmode'),
+        'dsn_parameters': {k: v for k, v in dsn_params.items() if k != 'password'},
     }
     cur = conn.cursor()
 
