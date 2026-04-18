@@ -34,7 +34,8 @@ def handler(event: dict, context) -> dict:
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT relname, seq_scan, idx_scan, n_live_tup
+        SELECT relname, seq_scan, idx_scan, n_live_tup,
+               n_dead_tup, last_autovacuum, last_autoanalyze
         FROM pg_stat_user_tables
         WHERE schemaname = %s AND relname = ANY(%s)
     """, (SCHEMA, list(TABLES)))
@@ -56,6 +57,9 @@ def handler(event: dict, context) -> dict:
             'seq_scan': stat[1] if stat else None,
             'idx_scan': stat[2] if stat else None,
             'n_live_tup': stat[3] if stat else None,
+            'n_dead_tup': stat[4] if stat else None,
+            'last_autovacuum': stat[5].isoformat() if stat and stat[5] else None,
+            'last_autoanalyze': stat[6].isoformat() if stat and stat[6] else None,
         }
 
     cur.execute('SELECT pg_database_size(current_database())')
