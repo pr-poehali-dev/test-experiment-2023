@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Icon from '@/components/ui/icon';
 
 const DB_MONITOR_URL = 'https://functions.poehali.dev/86db669a-df3b-4650-a2cc-ce71ae6e3e4d';
 const TABLES = ['members', 'spots', 'trips'] as const;
+const AUTO_REFRESH_SEC = 30;
 
 interface TableStats {
   count: number;
@@ -33,6 +34,26 @@ function formatDate(iso: string | null) {
   return new Date(iso).toLocaleString('ru-RU');
 }
 
+function deadTuplesStatus(n_dead: number | null, n_live: number | null): 'ok' | 'warn' | 'crit' {
+  if (n_dead === null || n_live === null || n_live === 0) return 'ok';
+  const pct = n_dead / (n_live + n_dead) * 100;
+  if (pct > 20) return 'crit';
+  if (pct > 10) return 'warn';
+  return 'ok';
+}
+
+function scanStatus(seq: number | null, idx: number | null): 'ok' | 'warn' {
+  if (seq === null || idx === null || seq === 0) return 'ok';
+  if (seq > 100 && seq > idx * 3) return 'warn';
+  return 'ok';
+}
+
+const STATUS_DOT: Record<string, string> = {
+  ok: 'bg-green-400',
+  warn: 'bg-yellow-400',
+  crit: 'bg-red-500',
+};
+
 const TABLE_LABELS: Record<string, string> = {
   members: 'Участники',
   spots: 'Водоёмы',
@@ -45,14 +66,16 @@ export default function Admin() {
   const [data, setData] = useState<MonitorData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [countdown, setCountdown] = useState(AUTO_REFRESH_SEC);
 
   useEffect(() => {
     const saved = sessionStorage.getItem('admin_token');
     if (saved) setToken(saved);
   }, []);
 
-  async function load(t: string) {
-    setLoading(true);
+  const load = useCallback(async (t: string, silent = false) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       const res = await fetch(DB_MONITOR_URL, {
@@ -62,12 +85,29 @@ export default function Admin() {
       const json = await res.json();
       setData(json);
       setToken(t);
+      setLastUpdated(new Date());
+      setCountdown(AUTO_REFRESH_SEC);
       sessionStorage.setItem('admin_token', t);
     } catch {
       setError('Ошибка подключения');
     }
-    setLoading(false);
-  }
+    if (!silent) setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (!token) return;
+    const interval = setInterval(() => {
+      setCountdown(c => {
+        if (c <= 1) { load(token, true); return AUTO_REFRESH_SEC; }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [token, load]);
+
+  useEffect(() => {
+    if (token && !data) load(token);
+  }, [token]);
 
   if (!token) {
     return (
@@ -99,17 +139,24 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-[hsl(var(--water-50))] px-6 py-12">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-10">
+
+        <div className="flex items-start justify-between mb-10">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-[hsl(var(--water-600))] mb-1">Панель</p>
             <h1 className="font-cormorant text-3xl font-light text-[hsl(var(--water-900))]">Мониторинг базы данных</h1>
+            {lastUpdated && (
+              <p className="text-xs text-[hsl(var(--water-600))] mt-1">
+                Обновлено: {lastUpdated.toLocaleTimeString('ru-RU')} · следующее через {countdown}с
+              </p>
+            )}
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 mt-1">
             <button
               onClick={() => load(token)}
-              className="flex items-center gap-2 text-sm text-[hsl(var(--water-600))] hover:text-[hsl(var(--water-900))] transition-colors"
+              disabled={loading}
+              className="flex items-center gap-2 text-sm text-[hsl(var(--water-600))] hover:text-[hsl(var(--water-900))] transition-colors disabled:opacity-50"
             >
-              <Icon name="RefreshCw" size={14} />
+              <Icon name="RefreshCw" size={14} className={loading ? 'animate-spin' : ''} />
               Обновить
             </button>
             <button
@@ -122,8 +169,8 @@ export default function Admin() {
           </div>
         </div>
 
-        {loading && <p className="text-sm text-[hsl(var(--water-600))]">Загрузка...</p>}
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {loading && !data && <p className="text-sm text-[hsl(var(--water-600))]">Загрузка...</p>}
+        {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
 
         {data && (
           <>
@@ -137,13 +184,25 @@ export default function Admin() {
               {TABLES.map(table => {
                 const t = data.tables[table];
                 if (!t) return null;
+
+                const deadPct = t.n_live_tup && t.n_dead_tup !== null
+                  ? ((t.n_dead_tup / (t.n_live_tup + t.n_dead_tup)) * 100).toFixed(1)
+                  : null;
+                const deadStatus = deadTuplesStatus(t.n_dead_tup, t.n_live_tup);
+                const scanSt = scanStatus(t.seq_scan, t.idx_scan);
+                const overallStatus = deadStatus === 'crit' ? 'crit' : (deadStatus === 'warn' || scanSt === 'warn') ? 'warn' : 'ok';
+
                 return (
                   <div key={table} className="border border-[hsl(var(--water-100))] rounded-sm p-6 bg-white">
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="font-cormorant text-xl text-[hsl(var(--water-900))]">{TABLE_LABELS[table]}</h2>
+                    <div className="flex items-center justify-between mb-5">
+                      <div className="flex items-center gap-3">
+                        <span className={`w-2 h-2 rounded-full ${STATUS_DOT[overallStatus]}`} />
+                        <h2 className="font-cormorant text-xl text-[hsl(var(--water-900))]">{TABLE_LABELS[table]}</h2>
+                      </div>
                       <span className="text-xs uppercase tracking-[0.15em] text-[hsl(var(--water-600))]">{table}</span>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
                       <div>
                         <p className="text-xs text-[hsl(var(--water-600))] mb-1">Записей</p>
                         <p className="text-lg font-semibold text-[hsl(var(--water-900))]">{t.count}</p>
@@ -158,17 +217,30 @@ export default function Admin() {
                       </div>
                       <div>
                         <p className="text-xs text-[hsl(var(--water-600))] mb-1">Мёртвых строк</p>
-                        <p className={`text-lg font-semibold ${t.n_dead_tup && t.n_dead_tup > 100 ? 'text-red-500' : 'text-[hsl(var(--water-900))]'}`}>
-                          {t.n_dead_tup ?? '—'}
-                        </p>
+                        <div className="flex items-baseline gap-2">
+                          <p className={`text-lg font-semibold ${deadStatus === 'crit' ? 'text-red-500' : deadStatus === 'warn' ? 'text-yellow-500' : 'text-[hsl(var(--water-900))]'}`}>
+                            {t.n_dead_tup ?? '—'}
+                          </p>
+                          {deadPct !== null && (
+                            <span className="text-xs text-[hsl(var(--water-600))]">{deadPct}%</span>
+                          )}
+                        </div>
+                        {deadStatus === 'warn' && <p className="text-xs text-yellow-600 mt-0.5">Рекомендуется VACUUM</p>}
+                        {deadStatus === 'crit' && <p className="text-xs text-red-500 mt-0.5">Нужен срочный VACUUM</p>}
                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-[hsl(var(--water-100))]">
                       <div>
                         <p className="text-xs text-[hsl(var(--water-600))] mb-1">Последняя запись</p>
                         <p className="text-sm text-[hsl(var(--water-900))]">{formatDate(t.last_updated)}</p>
                       </div>
                       <div>
                         <p className="text-xs text-[hsl(var(--water-600))] mb-1">Seq / Idx scans</p>
-                        <p className="text-sm text-[hsl(var(--water-900))]">{t.seq_scan ?? '—'} / {t.idx_scan ?? '—'}</p>
+                        <p className={`text-sm ${scanSt === 'warn' ? 'text-yellow-500' : 'text-[hsl(var(--water-900))]'}`}>
+                          {t.seq_scan ?? '—'} / {t.idx_scan ?? '—'}
+                        </p>
+                        {scanSt === 'warn' && <p className="text-xs text-yellow-600 mt-0.5">Много seq scans — нужен индекс</p>}
                       </div>
                       <div>
                         <p className="text-xs text-[hsl(var(--water-600))] mb-1">Автовакуум</p>
