@@ -4,8 +4,13 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --water-50: 200 30% 97%;
+    --water-100: 200 25% 92%;
+    --water-600: 205 40% 38%;
+    --water-900: 210 35% 14%;
+
+    --background: 200 18% 97%;
+    --foreground: 210 35% 14%;
 
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
