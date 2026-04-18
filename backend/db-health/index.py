@@ -1,11 +1,16 @@
 import json
 import os
 import time
+import datetime
 import psycopg2
 
 
 def handler(event: dict, context) -> dict:
     """Проверяет доступность базы данных и возвращает версию PostgreSQL."""
+    ts = datetime.datetime.utcnow().isoformat() + 'Z'
+    ip = (event.get('requestContext') or {}).get('identity', {}).get('sourceIp', 'unknown')
+    print(f"[db-health] {ts} ip={ip}")
+
     if event.get('httpMethod') == 'OPTIONS':
         return {
             'statusCode': 200,
