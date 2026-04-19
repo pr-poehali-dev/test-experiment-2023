@@ -37,8 +37,13 @@ def handler(event: dict, context) -> dict:
             'body': json.dumps({'error': 'MONITORING_URL not set'}),
         }
 
+    cookie = os.environ.get('HEALTH_CHECK_COOKIE', '')
+    req = urllib.request.Request(monitoring_url)
+    if cookie:
+        req.add_header('Cookie', cookie)
+
     try:
-        with urllib.request.urlopen(monitoring_url, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=5) as resp:
             status = resp.status
             body = resp.read(1000).decode('utf-8', errors='replace')
     except urllib.error.HTTPError as e:
