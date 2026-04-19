@@ -11,6 +11,7 @@ VERSION = 2
 def handler(event: dict, context) -> dict:
     """Health check внешнего мониторинг-сервера из MONITORING_URL. Требует ADMIN_TOKEN."""
 
+    print("probe")
     if event.get('httpMethod') == 'OPTIONS':
         return {
             'statusCode': 200,
