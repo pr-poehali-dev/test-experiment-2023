@@ -19,11 +19,13 @@ def handler(event: dict, context) -> dict:
 
     memory = {}
     try:
+        MEMORY_FIELDS = {'VmPeak', 'VmSize', 'VmHWM', 'VmRSS', 'VmData', 'VmStk', 'VmExe', 'VmLib', 'Threads', 'FDSize'}
         with open('/proc/self/status') as f:
             for line in f:
-                if line.startswith('VmRSS:') or line.startswith('VmSize:'):
-                    key, val = line.split(':', 1)
-                    memory[key.strip()] = val.strip()
+                key = line.split(':')[0]
+                if key in MEMORY_FIELDS:
+                    val = line.split(':', 1)[1]
+                    memory[key] = val.strip()
     except Exception:
         pass
 
