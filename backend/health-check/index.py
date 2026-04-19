@@ -37,6 +37,8 @@ def handler(event: dict, context) -> dict:
             'body': json.dumps({'error': 'MONITORING_URL not set'}),
         }
 
+    print(f"health-check request at {datetime.now().isoformat()}")
+
     cookie = os.environ.get('HEALTH_CHECK_COOKIE', '')
     req = urllib.request.Request(monitoring_url)
     if cookie:
