@@ -1,0 +1,1 @@
+{"tests": [{"name": "system-info returns data", "method": "GET", "path": "/", "expectedStatus": 200, "expectedBody": {"python_version": "string"}, "bodyMatcher": "partial"}]}
