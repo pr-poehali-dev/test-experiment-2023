@@ -1,0 +1,1 @@
+{"tests": [{"name": "storage-check returns bucket info", "method": "GET", "path": "/", "expectedStatus": 200, "expectedBody": {"bucket": "files"}, "bodyMatcher": "partial"}]}
