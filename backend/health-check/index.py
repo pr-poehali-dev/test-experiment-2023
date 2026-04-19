@@ -2,10 +2,11 @@ import json
 import os
 import urllib.request
 import urllib.error
+from urllib.parse import urlparse
 from datetime import datetime, timezone
 
 
-VERSION = 2
+VERSION = 3
 
 
 def handler(event: dict, context) -> dict:
@@ -46,6 +47,22 @@ def handler(event: dict, context) -> dict:
     method = event.get('httpMethod', 'GET')
     cookie = os.environ.get('HEALTH_CHECK_COOKIE', '')
 
+    # preflight: GET на корень хоста чтобы получить CDN session cookies
+    parsed = urlparse(monitoring_url)
+    host_url = f"{parsed.scheme}://{parsed.netloc}/"
+    cdn_cookies = ''
+    try:
+        pre_req = urllib.request.Request(host_url)
+        with urllib.request.urlopen(pre_req, timeout=5) as pre_resp:
+            set_cookie = pre_resp.headers.get_all('Set-Cookie') or []
+            cdn_cookies = '; '.join(
+                c.split(';')[0].strip() for c in set_cookie if c
+            )
+    except Exception:
+        pass
+
+    combined_cookie = '; '.join(filter(None, [cdn_cookies, cookie]))
+
     if method == 'POST':
         incoming = json.loads(event.get('body') or '{}')
         payload = incoming.get('payload', {})
@@ -55,8 +72,8 @@ def handler(event: dict, context) -> dict:
     else:
         req = urllib.request.Request(monitoring_url)
 
-    if cookie:
-        req.add_header('Cookie', cookie)
+    if combined_cookie:
+        req.add_header('Cookie', combined_cookie)
 
     try:
         with urllib.request.urlopen(req, timeout=5) as resp:
