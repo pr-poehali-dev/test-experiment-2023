@@ -78,8 +78,13 @@ def handler(event: dict, context) -> dict:
             'body': json.dumps({'ok': False, 'error': str(e)}),
         }
 
+    try:
+        parsed_body = json.loads(body)
+    except Exception:
+        parsed_body = body
+
     return {
         'statusCode': 200,
         'headers': {'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'ok': status < 400, 'status': status, 'body': body, 'timestamp': datetime.now(timezone.utc).isoformat()}),
+        'body': json.dumps({'ok': status < 400, 'status': status, 'body': parsed_body, 'timestamp': datetime.now(timezone.utc).isoformat()}),
     }
