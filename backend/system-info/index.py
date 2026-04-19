@@ -29,6 +29,13 @@ def handler(event: dict, context) -> dict:
 
     uname = platform.uname()
 
+    SAFE_CONTEXT_FIELDS = ('function_name', 'function_version', 'memory_limit', 'request_id')
+    ctx_info = {}
+    for field in SAFE_CONTEXT_FIELDS:
+        val = getattr(context, field, None)
+        if val is not None:
+            ctx_info[field] = val
+
     data = {
         'time': datetime.now(timezone.utc).isoformat(),
         'python_version': sys.version,
@@ -40,6 +47,7 @@ def handler(event: dict, context) -> dict:
             'release': uname.release,
             'machine': uname.machine,
         },
+        'context': ctx_info,
     }
 
     return {
