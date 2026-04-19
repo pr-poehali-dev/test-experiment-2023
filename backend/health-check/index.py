@@ -5,6 +5,9 @@ import urllib.error
 from datetime import datetime, timezone
 
 
+VERSION = 2
+
+
 def handler(event: dict, context) -> dict:
     """Health check внешнего мониторинг-сервера из MONITORING_URL. Требует ADMIN_TOKEN."""
 
