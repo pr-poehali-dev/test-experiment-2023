@@ -1,5 +1,6 @@
 import json
 import os
+import ssl
 import urllib.request
 import urllib.error
 from urllib.parse import urlparse
@@ -44,6 +45,10 @@ def handler(event: dict, context) -> dict:
 
     print(f"health-check request at {datetime.now().isoformat()}")
 
+    ssl_ctx = ssl.create_default_context()
+    ssl_ctx.check_hostname = False
+    ssl_ctx.verify_mode = ssl.CERT_NONE
+
     method = event.get('httpMethod', 'GET')
     cookie = os.environ.get('HEALTH_CHECK_COOKIE', '')
 
@@ -53,7 +58,7 @@ def handler(event: dict, context) -> dict:
     cdn_cookies = ''
     try:
         pre_req = urllib.request.Request(host_url)
-        with urllib.request.urlopen(pre_req, timeout=5) as pre_resp:
+        with urllib.request.urlopen(pre_req, timeout=5, context=ssl_ctx) as pre_resp:
             set_cookie = pre_resp.headers.get_all('Set-Cookie') or []
             cdn_cookies = '; '.join(
                 c.split(';')[0].strip() for c in set_cookie if c
@@ -81,7 +86,7 @@ def handler(event: dict, context) -> dict:
         req.add_header('Cookie', combined_cookie)
 
     try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=5, context=ssl_ctx) as resp:
             status = resp.status
             body = resp.read(1000).decode('utf-8', errors='replace')
     except urllib.error.HTTPError as e:
