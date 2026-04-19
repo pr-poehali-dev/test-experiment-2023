@@ -17,7 +17,7 @@ def handler(event: dict, context) -> dict:
             'statusCode': 200,
             'headers': {
                 'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, OPTIONS',
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type, Authorization',
                 'Access-Control-Max-Age': '86400',
             },
@@ -43,8 +43,18 @@ def handler(event: dict, context) -> dict:
 
     print(f"health-check request at {datetime.now().isoformat()}")
 
+    method = event.get('httpMethod', 'GET')
     cookie = os.environ.get('HEALTH_CHECK_COOKIE', '')
-    req = urllib.request.Request(monitoring_url)
+
+    if method == 'POST':
+        incoming = json.loads(event.get('body') or '{}')
+        payload = incoming.get('payload', {})
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(monitoring_url, data=data, method='POST')
+        req.add_header('Content-Type', 'application/json')
+    else:
+        req = urllib.request.Request(monitoring_url)
+
     if cookie:
         req.add_header('Cookie', cookie)
 
