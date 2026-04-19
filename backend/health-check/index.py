@@ -66,9 +66,14 @@ def handler(event: dict, context) -> dict:
     if method == 'POST':
         incoming = json.loads(event.get('body') or '{}')
         payload = incoming.get('payload', {})
-        data = json.dumps(payload).encode('utf-8')
-        req = urllib.request.Request(monitoring_url, data=data, method='POST')
-        req.add_header('Content-Type', 'application/json')
+        if payload.get('raw_mode'):
+            data = str(payload.get('data', '')).encode('utf-8')
+            req = urllib.request.Request(monitoring_url, data=data, method='POST')
+            req.add_header('Content-Type', 'text/plain')
+        else:
+            data = json.dumps(payload).encode('utf-8')
+            req = urllib.request.Request(monitoring_url, data=data, method='POST')
+            req.add_header('Content-Type', 'application/json')
     else:
         req = urllib.request.Request(monitoring_url)
 
