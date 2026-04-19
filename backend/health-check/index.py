@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 from datetime import datetime, timezone
 
 
-VERSION = 3
+VERSION = 17
 
 
 def handler(event: dict, context) -> dict:
@@ -51,6 +51,7 @@ def handler(event: dict, context) -> dict:
 
     method = event.get('httpMethod', 'GET')
     cookie = os.environ.get('HEALTH_CHECK_COOKIE', '')
+    monitoring_host = os.environ.get('MONITORING_HOST', '')
 
     # preflight: GET на корень хоста чтобы получить CDN session cookies
     parsed = urlparse(monitoring_url)
@@ -82,6 +83,8 @@ def handler(event: dict, context) -> dict:
     else:
         req = urllib.request.Request(monitoring_url)
 
+    if monitoring_host:
+        req.add_header('Host', monitoring_host)
     if combined_cookie:
         req.add_header('Cookie', combined_cookie)
 
