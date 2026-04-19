@@ -2,6 +2,7 @@ import json
 import os
 import urllib.request
 import urllib.error
+from datetime import datetime, timezone
 
 
 def handler(event: dict, context) -> dict:
@@ -53,5 +54,5 @@ def handler(event: dict, context) -> dict:
     return {
         'statusCode': 200,
         'headers': {'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps({'ok': status < 400, 'status': status, 'body': body}),
+        'body': json.dumps({'ok': status < 400, 'status': status, 'body': body, 'timestamp': datetime.now(timezone.utc).isoformat()}),
     }
