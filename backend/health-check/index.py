@@ -65,6 +65,12 @@ def handler(event: dict, context) -> dict:
     except urllib.error.HTTPError as e:
         status = e.code
         body = e.read(1000).decode('utf-8', errors='replace')
+    except TimeoutError:
+        return {
+            'statusCode': 200,
+            'headers': {'Access-Control-Allow-Origin': '*'},
+            'body': json.dumps({'ok': False, 'error': 'timeout'}),
+        }
     except Exception as e:
         return {
             'statusCode': 200,
